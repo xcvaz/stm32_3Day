@@ -1,0 +1,205 @@
+/* USER CODE BEGIN Header */
+/**
+  ******************************************************************************
+  * @file           : main.c
+  * @brief          : SPI Flash Writer
+  ******************************************************************************
+  */
+/* USER CODE END Header */
+
+#include "main.h"
+#include <stdio.h>
+#include <string.h>
+
+/* Private variables ---------------------------------------------------------*/
+UART_HandleTypeDef hlpuart1;
+SPI_HandleTypeDef hspi1;
+
+char msg[100];
+
+#define CS_LOW()  HAL_GPIO_WritePin(GPIOA,GPIO_PIN_4,GPIO_PIN_RESET)
+#define CS_HIGH() HAL_GPIO_WritePin(GPIOA,GPIO_PIN_4,GPIO_PIN_SET)
+
+/* Function Prototypes */
+void SystemClock_Config(void);
+static void MX_GPIO_Init(void);
+static void MX_LPUART1_UART_Init(void);
+static void MX_SPI1_Init(void);
+
+void Flash_WriteEnable(void)
+{
+	uint8_t cmd=0x06;
+	CS_LOW();
+	HAL_SPI_Transmit(&hspi1,&cmd,1,100);
+	CS_HIGH();
+}
+
+uint8_t Flash_Status(void)
+{
+	uint8_t cmd=0x05;
+	uint8_t status;
+
+	CS_LOW();
+	HAL_SPI_Transmit(&hspi1,&cmd,1,100);
+	HAL_SPI_Receive(&hspi1,&status,1,100);
+	CS_HIGH();
+
+	return status;
+}
+
+void Flash_WaitBusy(void)
+{
+	while(Flash_Status()&0x01);
+}
+
+void Flash_EraseSector(uint32_t addr)
+{
+	uint8_t cmd[4];
+
+	Flash_WriteEnable();
+
+	cmd[0]=0x20;
+	cmd[1]=addr>>16;
+	cmd[2]=addr>>8;
+	cmd[3]=addr;
+
+	CS_LOW();
+	HAL_SPI_Transmit(&hspi1,cmd,4,100);
+	CS_HIGH();
+
+	Flash_WaitBusy();
+}
+
+void Flash_Write(uint32_t addr,uint8_t *data,uint16_t len)
+{
+	uint8_t cmd[4];
+
+	Flash_WriteEnable();
+
+	cmd[0]=0x02;
+	cmd[1]=addr>>16;
+	cmd[2]=addr>>8;
+	cmd[3]=addr;
+
+	CS_LOW();
+	HAL_SPI_Transmit(&hspi1,cmd,4,100);
+	HAL_SPI_Transmit(&hspi1,data,len,100);
+	CS_HIGH();
+
+	Flash_WaitBusy();
+}
+
+int main(void)
+{
+	HAL_Init();
+	SystemClock_Config();
+
+	MX_GPIO_Init();
+	MX_LPUART1_UART_Init();
+	MX_SPI1_Init();
+
+	uint8_t text[]="Hello STM32";
+
+	HAL_Delay(100);
+
+	sprintf(msg,"\r\nFLASH WRITER\r\n");
+	HAL_UART_Transmit(&hlpuart1,(uint8_t*)msg,strlen(msg),100);
+
+	sprintf(msg,"Erasing Sector...\r\n");
+	HAL_UART_Transmit(&hlpuart1,(uint8_t*)msg,strlen(msg),100);
+
+	Flash_EraseSector(0x000000);
+
+	sprintf(msg,"Writing Data...\r\n");
+	HAL_UART_Transmit(&hlpuart1,(uint8_t*)msg,strlen(msg),100);
+
+	Flash_Write(0x000000,text,sizeof(text));
+
+	sprintf(msg,"WRITE SUCCESS\r\n");
+	HAL_UART_Transmit(&hlpuart1,(uint8_t*)msg,strlen(msg),100);
+
+	while (1)
+	{
+	}
+}
+
+/* -------- Keep these CubeMX functions exactly as generated -------- */
+
+void SystemClock_Config(void)
+{
+  RCC_OscInitTypeDef RCC_OscInitStruct={0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct={0};
+
+  HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1);
+
+  RCC_OscInitStruct.OscillatorType=RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState=RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue=RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.PLL.PLLState=RCC_PLL_NONE;
+  HAL_RCC_OscConfig(&RCC_OscInitStruct);
+
+  RCC_ClkInitStruct.ClockType=RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK|
+                              RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource=RCC_SYSCLKSOURCE_HSI;
+  RCC_ClkInitStruct.AHBCLKDivider=RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider=RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB2CLKDivider=RCC_HCLK_DIV1;
+
+  HAL_RCC_ClockConfig(&RCC_ClkInitStruct,FLASH_LATENCY_0);
+}
+
+static void MX_SPI1_Init(void)
+{
+  hspi1.Instance=SPI1;
+  hspi1.Init.Mode=SPI_MODE_MASTER;
+  hspi1.Init.Direction=SPI_DIRECTION_2LINES;
+  hspi1.Init.DataSize=SPI_DATASIZE_8BIT;
+  hspi1.Init.CLKPolarity=SPI_POLARITY_LOW;
+  hspi1.Init.CLKPhase=SPI_PHASE_1EDGE;
+  hspi1.Init.NSS=SPI_NSS_SOFT;
+  hspi1.Init.BaudRatePrescaler=SPI_BAUDRATEPRESCALER_16;
+  hspi1.Init.FirstBit=SPI_FIRSTBIT_MSB;
+  hspi1.Init.TIMode=SPI_TIMODE_DISABLE;
+  hspi1.Init.CRCCalculation=SPI_CRCCALCULATION_DISABLE;
+  hspi1.Init.CRCPolynomial=7;
+  hspi1.Init.CRCLength=SPI_CRC_LENGTH_DATASIZE;
+  hspi1.Init.NSSPMode=SPI_NSS_PULSE_ENABLE;
+  HAL_SPI_Init(&hspi1);
+}
+
+static void MX_LPUART1_UART_Init(void)
+{
+  hlpuart1.Instance=LPUART1;
+  hlpuart1.Init.BaudRate=115200;
+  hlpuart1.Init.WordLength=UART_WORDLENGTH_8B;
+  hlpuart1.Init.StopBits=UART_STOPBITS_1;
+  hlpuart1.Init.Parity=UART_PARITY_NONE;
+  hlpuart1.Init.Mode=UART_MODE_TX_RX;
+  hlpuart1.Init.HwFlowCtl=UART_HWCONTROL_NONE;
+  hlpuart1.Init.OneBitSampling=UART_ONE_BIT_SAMPLE_DISABLE;
+  hlpuart1.Init.ClockPrescaler=UART_PRESCALER_DIV1;
+  HAL_UART_Init(&hlpuart1);
+  HAL_UARTEx_DisableFifoMode(&hlpuart1);
+}
+
+static void MX_GPIO_Init(void)
+{
+  GPIO_InitTypeDef GPIO_InitStruct={0};
+
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+
+  HAL_GPIO_WritePin(GPIOA,GPIO_PIN_4,GPIO_PIN_SET);
+
+  GPIO_InitStruct.Pin=GPIO_PIN_4;
+  GPIO_InitStruct.Mode=GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull=GPIO_NOPULL;
+  GPIO_InitStruct.Speed=GPIO_SPEED_FREQ_VERY_HIGH;
+
+  HAL_GPIO_Init(GPIOA,&GPIO_InitStruct);
+}
+
+void Error_Handler(void)
+{
+  __disable_irq();
+  while(1){}
+}
