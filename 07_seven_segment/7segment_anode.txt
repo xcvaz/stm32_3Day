@@ -1,0 +1,316 @@
+/* USER CODE BEGIN Header */
+/**
+ ******************************************************************************
+ * @file           : main.c
+ * @brief          : 7 Segment 0-9 Counter (Common Anode)
+ ******************************************************************************
+ */
+/* USER CODE END Header */
+
+/* Includes ------------------------------------------------------------------*/
+#include "main.h"
+
+/* Private function prototypes -----------------------------------------------*/
+void SystemClock_Config(void);
+static void MX_GPIO_Init(void);
+
+/* USER CODE BEGIN PFP */
+void display_digit(uint8_t digit);
+/* USER CODE END PFP */
+
+/* Private user code ---------------------------------------------------------*/
+/* USER CODE BEGIN 0 */
+
+/*
+ * 7-Segment connections
+ *
+ * PA0 -> a
+ * PA1 -> b
+ * PA2 -> c
+ * PA3 -> d
+ * PA4 -> e
+ * PA5 -> f
+ * PA6 -> g
+ *
+ * Common Anode:
+ * LOW  = ON
+ * HIGH = OFF
+ */
+
+/* ============================================================
+   DISPLAY DIGIT
+   ============================================================ */
+
+void display_digit(uint8_t digit)
+{
+    uint8_t pattern;
+
+    switch(digit)
+    {
+        case 0:
+            pattern = 0x3F;    // a b c d e f
+            break;
+
+        case 1:
+            pattern = 0x06;    // b c
+            break;
+
+        case 2:
+            pattern = 0x5B;    // a b d e g
+            break;
+
+        case 3:
+            pattern = 0x4F;    // a b c d g
+            break;
+
+        case 4:
+            pattern = 0x66;    // b c f g
+            break;
+
+        case 5:
+            pattern = 0x6D;    // a c d f g
+            break;
+
+        case 6:
+            pattern = 0x7D;    // a c d e f g
+            break;
+
+        case 7:
+            pattern = 0x07;    // a b c
+            break;
+
+        case 8:
+            pattern = 0x7F;    // a b c d e f g
+            break;
+
+        case 9:
+            pattern = 0x6F;    // a b c d f g
+            break;
+
+        default:
+            pattern = 0x00;    // all OFF
+            break;
+    }
+
+    /*
+     * Send pattern to PA0-PA6 (Inverted for Common Anode: 1 = LOW, 0 = HIGH)
+     */
+
+    HAL_GPIO_WritePin(
+        GPIOA,
+        GPIO_PIN_0,
+        (pattern & 0x01) ? GPIO_PIN_RESET : GPIO_PIN_SET
+    );
+
+    HAL_GPIO_WritePin(
+        GPIOA,
+        GPIO_PIN_1,
+        (pattern & 0x02) ? GPIO_PIN_RESET : GPIO_PIN_SET
+    );
+
+    HAL_GPIO_WritePin(
+        GPIOA,
+        GPIO_PIN_2,
+        (pattern & 0x04) ? GPIO_PIN_RESET : GPIO_PIN_SET
+    );
+
+    HAL_GPIO_WritePin(
+        GPIOA,
+        GPIO_PIN_3,
+        (pattern & 0x08) ? GPIO_PIN_RESET : GPIO_PIN_SET
+    );
+
+    HAL_GPIO_WritePin(
+        GPIOA,
+        GPIO_PIN_4,
+        (pattern & 0x10) ? GPIO_PIN_RESET : GPIO_PIN_SET
+    );
+
+    HAL_GPIO_WritePin(
+        GPIOA,
+        GPIO_PIN_5,
+        (pattern & 0x20) ? GPIO_PIN_RESET : GPIO_PIN_SET
+    );
+
+    HAL_GPIO_WritePin(
+        GPIOA,
+        GPIO_PIN_6,
+        (pattern & 0x40) ? GPIO_PIN_RESET : GPIO_PIN_SET
+    );
+}
+/* USER CODE END 0 */
+
+/**
+ * @brief  The application entry point.
+ * @retval int
+ */
+int main(void)
+{
+    /* Reset of all peripherals, Initializes Flash and Systick */
+    HAL_Init();
+
+    /* Configure system clock */
+    SystemClock_Config();
+
+    /* Initialize GPIO */
+    MX_GPIO_Init();
+
+    /* USER CODE BEGIN 2 */
+
+    /* USER CODE END 2 */
+
+    /* Infinite loop */
+    while (1)
+    {
+        display_digit(0);
+        HAL_Delay(1000);
+
+        display_digit(1);
+        HAL_Delay(1000);
+
+        display_digit(2);
+        HAL_Delay(1000);
+
+        display_digit(3);
+        HAL_Delay(1000);
+
+        display_digit(4);
+        HAL_Delay(1000);
+
+        display_digit(5);
+        HAL_Delay(1000);
+
+        display_digit(6);
+        HAL_Delay(1000);
+
+        display_digit(7);
+        HAL_Delay(1000);
+
+        display_digit(8);
+        HAL_Delay(1000);
+
+        display_digit(9);
+        HAL_Delay(1000);
+    }
+}
+
+/**
+ * @brief System Clock Configuration
+ * @retval None
+ */
+void SystemClock_Config(void)
+{
+    RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+    RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+
+    /* Configure voltage scaling */
+    HAL_PWREx_ControlVoltageScaling(
+        PWR_REGULATOR_VOLTAGE_SCALE1
+    );
+
+    /* Configure HSI */
+    RCC_OscInitStruct.OscillatorType =
+        RCC_OSCILLATORTYPE_HSI;
+
+    RCC_OscInitStruct.HSIState =
+        RCC_HSI_ON;
+
+    RCC_OscInitStruct.HSICalibrationValue =
+        RCC_HSICALIBRATION_DEFAULT;
+
+    RCC_OscInitStruct.PLL.PLLState =
+        RCC_PLL_NONE;
+
+    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+    {
+        Error_Handler();
+    }
+
+    /* Configure CPU, AHB and APB clocks */
+    RCC_ClkInitStruct.ClockType =
+        RCC_CLOCKTYPE_HCLK |
+        RCC_CLOCKTYPE_SYSCLK |
+        RCC_CLOCKTYPE_PCLK1 |
+        RCC_CLOCKTYPE_PCLK2;
+
+    RCC_ClkInitStruct.SYSCLKSource =
+        RCC_SYSCLKSOURCE_HSI;
+
+    RCC_ClkInitStruct.AHBCLKDivider =
+        RCC_SYSCLK_DIV1;
+
+    RCC_ClkInitStruct.APB1CLKDivider =
+        RCC_HCLK_DIV1;
+
+    RCC_ClkInitStruct.APB2CLKDivider =
+        RCC_HCLK_DIV1;
+
+    if (HAL_RCC_ClockConfig(
+            &RCC_ClkInitStruct,
+            FLASH_LATENCY_0) != HAL_OK)
+    {
+        Error_Handler();
+    }
+}
+
+/**
+ * @brief GPIO Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_GPIO_Init(void)
+{
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+    /* Enable GPIOA clock */
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+
+    /* Initially turn OFF all segments (HIGH for Common Anode) */
+    HAL_GPIO_WritePin(
+        GPIOA,
+        GPIO_PIN_0 |
+        GPIO_PIN_1 |
+        GPIO_PIN_2 |
+        GPIO_PIN_3 |
+        GPIO_PIN_4 |
+        GPIO_PIN_5 |
+        GPIO_PIN_6,
+        GPIO_PIN_SET
+    );
+
+    /* Configure PA0 - PA6 as output */
+    GPIO_InitStruct.Pin =
+        GPIO_PIN_0 |
+        GPIO_PIN_1 |
+        GPIO_PIN_2 |
+        GPIO_PIN_3 |
+        GPIO_PIN_4 |
+        GPIO_PIN_5 |
+        GPIO_PIN_6;
+
+    GPIO_InitStruct.Mode =
+        GPIO_MODE_OUTPUT_PP;
+
+    GPIO_InitStruct.Pull =
+        GPIO_NOPULL;
+
+    GPIO_InitStruct.Speed =
+        GPIO_SPEED_FREQ_LOW;
+
+    HAL_GPIO_Init(
+        GPIOA,
+        &GPIO_InitStruct
+    );
+}
+
+/**
+ * @brief Error Handler
+ */
+void Error_Handler(void)
+{
+    __disable_irq();
+
+    while (1)
+    {
+    }
+}
